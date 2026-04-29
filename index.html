@@ -65,10 +65,17 @@ button { margin-top: 10px; padding: 10px; background: #162024; border: 1px solid
   <h1>HALDEN ARCHIVE</h1>
   <div class="subtitle">Restricted access // activity monitored</div>
 
-  <p class="green">ACCESS GRANTED</p>
-  <p class="path" id="path">/ROOT/</p>
+  <div id="login">
+    <input type="password" id="archivePassInput" placeholder="ENTER ACCESS KEY">
+    <button onclick="checkPassword()">Authenticate</button>
+    <p id="message" class="red"></p>
+  </div>
 
-  <div id="root" class="page">
+  <div id="archive" class="hidden">
+    <p class="green">ACCESS GRANTED</p>
+    <p class="path" id="path">/ROOT/</p>
+
+    <div id="root" class="page">
     <h2>ROOT</h2>
     <div class="folder" onclick="openPage('subjects','/ROOT/')">SUBJECTS</div>
     <div class="folder" onclick="openPage('logs','/ROOT/LOGS/')">ARCHIVE_LOGS</div>
@@ -142,9 +149,16 @@ button { margin-top: 10px; padding: 10px; background: #162024; border: 1px solid
     <h2 id="file-title"></h2>
     <div id="file-content"></div>
   </div>
+  </div>
 </div>
 
 <script>
+const protectedGate = {
+  salt: "Y2w5bvkwKH5CecNL/b3XEw==",
+  iv: "NDMx2pWx514lqyoj",
+  data: "osREUKhkiPc5XsvM31hOPFarP/4PdGxxo8zN9wXA"
+};
+
 const protectedPages = {
   "current_log_file": {
     "title": "CURRENT_LOG.txt",
@@ -463,6 +477,30 @@ async function tryDecrypt(encrypted, password) {
   const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, data);
   return new TextDecoder().decode(decrypted);
 }
+
+async function checkPassword() {
+  const password = document.getElementById("archivePassInput").value;
+  const message = document.getElementById("message");
+
+  try {
+    const result = await tryDecrypt(protectedGate, password);
+
+    if (result === "ACCESS_GRANTED") {
+      document.getElementById("login").style.display = "none";
+      document.getElementById("archive").classList.remove("hidden");
+      openPage("root", "/ROOT/");
+      return;
+    }
+  } catch (err) {
+    // Wrong password.
+  }
+
+  message.textContent = "ACCESS DENIED";
+}
+
+document.getElementById("archivePassInput").addEventListener("keydown", function(event) {
+  if (event.key === "Enter") checkPassword();
+});
 
 async function submitFilePassword() {
   if (!currentFile || !protectedPages[currentFile]) {
